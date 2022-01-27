@@ -3,43 +3,61 @@ var express = require('express');
 var path = require('path');
 var mongoose = require('mongoose');
 var logger = require('morgan');
-var userRouter = require('./routes/users');
-
-var indexRouter = require('./routes/index');
+const passport = require('passport');
+const cors = require('cors');
+const config = require('./config/config');
+const { applyPassportStrategies } = require('./middlewares/passport.strategies');
 
 
 var app = express();
-mongoose.connect('mongodb://localhost:27017/test');
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
-// view engine setup
-// app.set('views', path.join(__dirname, 'views'));
-// app.set('view engine', 'jade');
+mongoose.connect(config.DB.URL).then(() => {
+  	console.log("connected to mongoose")
+}).catch((error)=>{
+  	console.log('MongoDB connection error:', error);
+})
 
+app.use(cors({
+	origin : 'http://localhost:4200',
+	credentials : true,
+}));
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-// app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/user', userRouter);
+
+applyPassportStrategies(passport);
+
+
+(require('./routes/users.route')).routes(app);
+// var indexRouter = require('./routes/index');
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  next(createError(404));
+  	next(createError(404));
 });
+
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+	// set locals, only providing error in development
+	res.locals.message = err.message;
+	res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+	// render the error page
+	console.log(err);
+	res.status(err.status || 500);
+	res.send(err);
 });
+
+
+process.on('uncaughtException', uncaughtExceptionHandler = (err, res) => {
+	console.log(`Caught exception: ${JSON.stringify(err)}, ${err}`);
+	console.error('%s: %s %s', err.statusCode, JSON.stringify(err.message), JSON.stringify(err.stack));
+	res.status(500).json({method: res.req.method, api : res.req.url, status: 500, success: false, message: "sorry some internal error occured"})
+});
+
 
 module.exports = app;
