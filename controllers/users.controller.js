@@ -66,9 +66,32 @@ exports.register = function(req, res, next) {
 }
 
 
-
-exports.login = function(req, res, next) {
-
+exports.login = async function(req, res, next) {
+    const body = req.body;
+    try {
+        // Get user input
+        console.log(req.body);
+        const { email, pswd } = req.body;
+    
+        // Validate if user exist in our database
+        const user = await UserDB.findOne({ email });
+    
+        if (user && (await bcrypt.compare(pswd, user.pswd))) {
+          // Create token
+          const token = await  utils.encodeJWT(
+            { user_id: user._id, email }
+          );
+    
+          // save user token
+          user.token = token;
+    
+          // user
+            return res.status(200).json(user);
+        }
+        res.status(400).send("Invalid Credentials");
+      } catch (err) {
+        console.log(err);
+      }
 }
 
 
