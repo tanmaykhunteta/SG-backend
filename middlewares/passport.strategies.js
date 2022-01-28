@@ -7,8 +7,8 @@ exports.applyPassportStrategies = passport => {
     options.secretOrKey = config.JWT_CONFIG.SECRET;
     passport.use(
         new passportJWT.Strategy(options, (payload, done) => {
-        console.log(payload);
-        done(error, payload)
+            console.log(payload);
+            done(error, payload)
         })
     );
 };

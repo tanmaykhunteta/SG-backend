@@ -29,19 +29,27 @@ const User = new Schema({
     addr : Address,
     mob : Mobile,
     role : {type: String, default: config.ROLES.USER},
-    tmp_tkn : String
+}, {
+    timestamps : true
 })
 
 /**
  * returns an mongo doc searched by email
  * 
  * @param {String} email 
- * @param {String | Object} fields space separated field string or object
+ * @param {String | Object} fields (optional) space separated field string or object
+ * @param {Function} cb (optional) (err, result)
  * @returns {Promise<User>}
  */
-User.statics.findUserByEmail = (email, fields) => {
-    return mongoose.model(modelName).findOne({email: email}, fields);
+User.statics.findUserByEmail = (email, fields=null, cb=null) => {
+    const cond = {email: email};
+    fields = fields || {};
+    if(cb)
+        return mongoose.model(modelName).findOne(cond, fields, {}, cb);
+
+    return mongoose.model(modelName).findOne(cond, fields)
 } 
+
 
 const model = mongoose.model(modelName, User);
 module.exports = model;

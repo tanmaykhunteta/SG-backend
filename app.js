@@ -55,7 +55,7 @@ app.use(function(err, req, res, next) {
 
 process.on('uncaughtException', uncaughtExceptionHandler = (err, res) => {
 	console.log(`Caught exception: ${JSON.stringify(err)}, ${err}`);
-	console.error('%s: %s %s', err.statusCode, JSON.stringify(err.message), JSON.stringify(err.stack));
+	console.error('%s: %s %s', err.statusCode, err.message, err.stack);
 	res.status(500).json({method: res.req.method, api : res.req.url, status: 500, success: false, message: "sorry some internal error occured"})
 });
 
