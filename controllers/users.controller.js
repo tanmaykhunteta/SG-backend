@@ -68,7 +68,7 @@ exports.login = async function(req, res, next) {
     const body = req.body;
     try {
         // Get user input
-        console.log(req.body);
+        // console.log(req.body);
         const { email, pswd } = req.body;
     
         // Validate if user exist in our database
@@ -82,11 +82,17 @@ exports.login = async function(req, res, next) {
     
           // save user token
           user.token = token;
+          console.log(user);
     
           // user
-            return res.status(200).json(user);
+            return res.status(200).json({
+                token: token,
+                _id: user._id,
+                message: "success",
+            });
         }
-        res.status(400).send("Invalid Credentials");
+        res.status(202).json({
+            message:"Invalid Credentials"});
       } catch (err) {
         console.log(err);
       }
