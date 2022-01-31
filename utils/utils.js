@@ -4,6 +4,22 @@ const crypto = require('crypto')
 
 module.exports = {
 
+    createAuthData : function(details, cb=null) {
+        const tokenData = { user_id: details._id, email : details.email, fn: details.fn, ln: details.ln }
+        if(cb && typeof cb == "function") {
+            module.exports.encodeJWT(tokenData, null, (err, token) => {cb(err, {user: tokenData, jwt: token})});
+        } else {
+            return new Promise((res, rej) => {
+                module.exports.encodeJWT(tokenData, (err, token) => {
+                    if(err) 
+                        return rej(err);
+                    res({user : tokenData, jwt : token});
+                })
+            });
+        }
+    },
+
+    
     /**
      * encodes payload.
      * If no callback passed, it returns a promise 
@@ -15,7 +31,7 @@ module.exports = {
      */
     encodeJWT : function(payload, expiresIn=null, callback=null) {
         const extraOptions = {expiresIn : expiresIn || config.JWT_CONFIG.EXPIRES_IN};
-        if(callback) {
+        if(callback && typeof callback == "function") {
             jwt.sign(payload, config.JWT_CONFIG.SECRET, extraOptions, callback)
         } else {
             return new Promise((res, rej)=> {
@@ -28,6 +44,7 @@ module.exports = {
             })
         }
     },
+
 
 
     createResponse : function(req, res, status, success, message, data = null) {
@@ -50,7 +67,7 @@ module.exports = {
      * @returns {Promise<String>} return Promise token/error only if no cb passed
      */
     generateRandomToken : function(length, stringType, cb=null) {
-        if(cb) 
+        if(cb && typeof cb == "function") 
             return crypto.randomBytes(length, (err, buffer)=>{
                 cb(err, buffer.toString(stringType))
             })
