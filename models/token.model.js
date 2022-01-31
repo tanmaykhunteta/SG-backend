@@ -2,7 +2,6 @@ const config = require('../config/config');
 const mongoose = require('mongoose');
 const utils = require('../utils/utils');
 const Async = require('async');
-const { token } = require('morgan');
 const Schema = mongoose.Schema;
 const modelName = "tokens"
 
@@ -12,10 +11,13 @@ const Token = new Schema({
     email : {type : String, index:true, required: true},
     role : {type: String, enum : config.ROLES, required: true},
     type : {type: String, enum : config.TOKEN_TYPES_ENUM},
-    createdAt : {type: Date, index: true, expires : config.TOKEN_MAX_AGE}
+    rqtIP : String,
+    createdAt : {type: Date, index: true}
 }, {
     timestamps : true
 })
+
+Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, partialFilterExpression : {type : {$eq : config.TOKEN_TYPES.PSR}}})
 
 /**
  * returns an mongo doc searched by email
@@ -79,7 +81,6 @@ Token.statics.newEmailVerification = (details, token=null, cb=null) => {
             }
         ], (err, result)=> {
             if(err) {
-                console.log(err);
                 if(!cb) return rej(err)
                 else return res(err);
             };

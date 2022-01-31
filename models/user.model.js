@@ -24,6 +24,7 @@ const User = new Schema({
     email : {type : String, unique : true, required: true},
     pswd : {type : String, required : true},
     em_verified : {type : String, default : false},
+    em_verified_on : Date,
     gender : {type: Boolean, enum : ["male", "female"]},
     dob : Date,
     addr : Address,

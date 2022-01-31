@@ -70,7 +70,6 @@ exports.login = async function(req, res, next) {
     const body = req.body;
     try {
         // Get user input
-        console.log(req.body);
         const { email, pswd } = req.body;
     
         // Validate if user exist in our database
@@ -78,39 +77,45 @@ exports.login = async function(req, res, next) {
     
         if (user && (await bcrypt.compare(pswd, user.pswd))) {
           // Create token
-          const token = await  utils.encodeJWT(
-            { user_id: user._id, email }
-          );
-    
-          // save user token
-          user.token = token;
+          const auth = await utils.createAuthData(user);
     
           // user
-            return res.status(200).json(user);
+            res.setHeader(config.ACC_TKN_HDR, auth.jwt);
+            return utils.createResponse(req, res, 200, true, "Logged In", auth.user);
         }
-        res.status(400).send("Invalid Credentials");
+        return utils.createResponse(req, res, 400, false, "Invalid Credentials")
       } catch (err) {
-        console.log(err);
+        next(err);
       }
 }
 
 
 
 exports.verifyEmail = function(req, res, next) {
-    const token = req.query.token;
+    const token = req.body.token;
 
     const cond = {tkn : token, type : config.TOKEN_TYPES.EMV};
     TokenDB.findOneAndDelete(cond, {rawResult : true}) 
     .then((tokenData) => { //return {lastErrorObject : {}, value}
-        if(!tokenData.lastErrorObject.n) return res.redirect(config.FRONTEND + '/auth/email-verification-failed?message=token has been expired&status=false')
+        if(!tokenData.lastErrorObject.n) 
+            return utils.createResponse(req, res, 200, false, "Token might have expired")
 
         tokenData = tokenData.value;  
         const cond = {email: tokenData.email, role: tokenData.role, em_verified : false}
-        const update = {$set : {em_verified : true}}
+        const update = {$set : {em_verified : true, em_verified_on: new Date()}}
         UserDB.findOneAndUpdate(cond, update, {rawResult : true})
         .then((user) => {
-            if(!user.lastErrorObject.n) return res.redirect(config.FRONTEND + '/auth/email-verification-failed?message=email already verified&status=false');
-            return res.redirect(config.FRONTEND + '/auth/login')
+            if(!user.lastErrorObject.n) 
+                return utils.createResponse(req, res, 200, false, "Email is already verified!");
+            
+            utils.createAuthData(user)
+            .then((auth) => {
+                res.setHeader(config.ACC_TKN_HDR, auth.jwt)
+                return utils.createResponse(req, res, 200, true, "Email is verified", auth.user)
+            })
+            .catch((error) => {
+                return next(error);
+            })
         })
         .catch((error) => {
             next(error);

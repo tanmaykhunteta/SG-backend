@@ -20,7 +20,9 @@ mongoose.connect(config.DB.URL).then(() => {
 app.use(cors({
 	origin : 'http://localhost:4200',
 	credentials : true,
+	exposedHeaders : [config.ACC_TKN_HDR]
 }));
+
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -32,7 +34,6 @@ applyPassportStrategies(passport);
 
 (require('./routes/users.route')).routes(app);
 // var indexRouter = require('./routes/index');
-
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -46,18 +47,16 @@ app.use(function(err, req, res, next) {
 	res.locals.message = err.message;
 	res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-	// render the error page
 	console.log(err);
 	res.status(err.status || 500);
 	res.send(err);
 });
 
 
-process.on('uncaughtException', uncaughtExceptionHandler = (err, res) => {
+process.on('uncaughtException', uncaughtExceptionHandler = (err) => {
 	console.log(`Caught exception: ${JSON.stringify(err)}, ${err}`);
 	console.error('%s: %s %s', err.statusCode, err.message, err.stack);
-	res.status(500).json({method: res.req.method, api : res.req.url, status: 500, success: false, message: "sorry some internal error occured"})
 });
 
-
+ 
 module.exports = app;
