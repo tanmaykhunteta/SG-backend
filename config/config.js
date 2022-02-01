@@ -9,7 +9,9 @@ exports.DB["COLLECTION"] = "SG"
 exports.DB["URL"] = 'mongodb://localhost:27017/' + exports.DB.COLLECTION
 
 
-exports.ROLES = {USER : 'user'}
+exports.ROLES = {}
+exports.ROLES['USER'] = 'user'
+exports.ROLES_ENUM = [exports.ROLES.USER]
 
 exports.JWT_CONFIG = {
     SECRET : "secret101",
@@ -19,5 +21,15 @@ exports.JWT_CONFIG = {
 exports.NODE_MAILER = {}
 exports.NODE_MAILER["HOST"] = "smtp.ethereal.email"
 exports.NODE_MAILER["PORT"] = 587
-exports.NODE_MAILER["EMAIL"] = ""
-exports.NODE_MAILER["PASSWORD"] = ""
+exports.NODE_MAILER["EMAIL"] = "geuikhwawc3sbunz@ethereal.email"
+exports.NODE_MAILER["PASSWORD"] = "TkwsYrtuhAb2Ce6PJM"
+
+
+exports.TOKEN_MAX_AGE = 3600 // 1 hour
+exports.TOKEN_TYPES = {}
+exports.TOKEN_TYPES["EMV"] = 'emv'; //email verification
+exports.TOKEN_TYPES["PSR"] = 'pswd_rst'; //password reset
+exports.TOKEN_TYPES_ENUM = [exports.TOKEN_TYPES.EMV, exports.TOKEN_TYPES.PSR]
+
+
+exports.ACC_TKN_HDR = 'x-access-token'
