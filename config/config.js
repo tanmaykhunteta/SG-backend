@@ -15,7 +15,7 @@ exports.ROLES_ENUM = [exports.ROLES.USER]
 
 exports.JWT_CONFIG = {
     SECRET : "secret101",
-    EXPIRES_IN : '2m'
+    EXPIRES_IN : 3600
 }
 
 exports.NODE_MAILER = {}

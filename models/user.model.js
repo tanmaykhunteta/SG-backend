@@ -23,15 +23,26 @@ const User = new Schema({
     ln : {type : String, required : true},
     email : {type : String, unique : true, required: true},
     pswd : {type : String, required : true},
-    em_verified : {type : String, default : false},
+    em_verified : {type : Boolean, default : false},
     em_verified_on : Date,
-    gender : {type: Boolean, enum : ["male", "female"]},
-    dob : Date,
+    gndr : {type: String, enum : ["male", "female", "others"]},
+    yob : Number,
+    age : Number,
+    cntry : String,
     addr : Address,
     mob : Mobile,
     role : {type: String, default: config.ROLES.USER},
+    prvcyPlcy: Boolean
 }, {
     timestamps : true
+})
+
+User.pre('save', function(next) {
+    const user = this
+    if(user.isModified('yob')) {
+        user.age = (new Date()).getFullYear() - user.yob
+    } 
+    next();
 })
 
 /**
@@ -45,11 +56,25 @@ const User = new Schema({
 User.statics.findUserByEmail = (email, fields=null, cb=null) => {
     const cond = {email: email};
     fields = fields || {};
-    if(cb)
-        return mongoose.model(modelName).findOne(cond, fields, {}, cb);
+    const collection = mongoose.model(modelName)
+    if(cb && typeof cb == "function")
+        return collection.findOne(cond, fields, {}, cb);
 
-    return mongoose.model(modelName).findOne(cond, fields)
+    return collection.findOne(cond, fields)
 } 
+
+
+User.statics.verifyEmail = (tokenData, cb=null) => {
+    const cond = {email:tokenData.email, role: tokenData.role, em_verified : false}
+    const update = {$set : {em_verified: true, em_verified_on : new Date()}}
+    const options = {new: true}
+    const collection = mongoose.model(modelName);
+    if(cb && typeof cb == 'function') {
+        return collection.findOneAndUpdate(cond, update, options, cb);
+    }
+
+    return collection.findOneAndUpdate(cond, update, options);
+}
 
 
 const model = mongoose.model(modelName, User);

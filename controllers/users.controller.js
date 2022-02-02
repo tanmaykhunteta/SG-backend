@@ -5,49 +5,70 @@ const utils = require('../utils/utils')
 const bcrypt = require('bcrypt')
 const mailer = require('../config/mailer');
 const config = require('../config/config');
+const passport = require('passport');
+
+exports.getUserSessionDetails = function(req, res, next) {
+
+    utils.createResponse(req, res, 200, true, "user session found", req.user);
+}
 
 exports.register = function(req, res, next) {
     const body = req.body;
+    body.email = body.email.toLowerCase()
     Async.waterfall([
         function(cb){
-            UserDB.findUserByEmail(body.email, "_id")
-            .then((existingUser) => cb(null, existingUser))
-            .catch((error) => cb(error, null))
+            UserDB.findUserByEmail(body.email, "_id", (err, existingUser) => {
+                if(err) return cb(err, null);
+                cb(null, existingUser);
+            })
         },
 
         function(existingUser, cb) {
             if(existingUser) {
-                return utils.createResponse(req, res, 200, false, "User already exists")
+                console.log("dasfsdfdsd")
+                utils.createResponse(req, res, 200, false, "User already exists")
+                return cb(utils.createError("user already exists", true))
             }
 
-            bcrypt.hash(body.pswd, 10)
-            .then((hashedPswd) => cb(null, hashedPswd))
-            .catch((error) => cb(error))
+            bcrypt.hash(body.pswd, 10, (err, hashedPswd) => {
+                if(err || !hashedPswd) 
+                    return cb(error);
+                else 
+                    return cb(null, hashedPswd)
+            })
         },
 
         function(hashedPswd, cb) {
             const dataToSave = {...body, pswd : hashedPswd, cnfm_pswd: undefined};
+            console.log(dataToSave)
             const user = new UserDB(dataToSave)
-            user.save()
-            .then((doc) => {
-                if(!doc) 
+            user.save((err, doc)=> {
+                console.log(doc)
+                if(err) {
+                    return cb(err);
+                }
+                if(!doc) {
                     return cb("Error occured while saving user", null);
-                utils.createResponse(req, res, 202, true, "registered")
-                cb(null, doc);
-            })
-            .catch((error) => {
-                next(error, req, res, next)
-                cb(null, null)
+                }
+
+                utils.createAuthData(doc, (err, auth) => {
+                    if(!err && auth?.jwt) {
+                        res.setHeader(config.ACC_TKN_HDR, auth.jwt)
+                    }
+
+                    utils.createResponse(req, res, 202, true, "registered", auth?.user)
+                    cb(null, doc);
+                })
             })
         },
 
         function(userDoc, cb) {
-            TokenDB.newEmailVerification(userDoc)
-            .then((doc)=>{
-                cb(null, doc.tkn)
-            })
-            .catch((error) => {
-                cb(error, null);
+            userDoc.ip = utils.remoteIp(req);
+            TokenDB.newEmailVerification(userDoc, null, (err, doc) => {
+                if(err) 
+                    cb(utils.createError(err, true));
+                else 
+                    cb(null, doc.tkn)
             })
         },
 
@@ -58,9 +79,9 @@ exports.register = function(req, res, next) {
     ], 
 
     function(error, result) {
-        if(error) {
-            console.log(error);
-            return next(error, req, res, next);
+        console.log(error);
+        if(error && !error.handled) {
+            next(error, req, res, next)
         }
     })
 }
@@ -73,7 +94,7 @@ exports.login = async function(req, res, next) {
         const { email, pswd } = req.body;
     
         // Validate if user exist in our database
-        const user = await UserDB.findOne({ email });
+        const user = await UserDB.findOne({ email : email.toLowerCase() });
     
         if (user && (await bcrypt.compare(pswd, user.pswd))) {
           // Create token
@@ -94,34 +115,62 @@ exports.login = async function(req, res, next) {
 exports.verifyEmail = function(req, res, next) {
     const token = req.body.token;
 
-    const cond = {tkn : token, type : config.TOKEN_TYPES.EMV};
-    TokenDB.findOneAndDelete(cond, {rawResult : true}) 
-    .then((tokenData) => { //return {lastErrorObject : {}, value}
-        if(!tokenData.lastErrorObject.n) 
-            return utils.createResponse(req, res, 200, false, "Token might have expired")
+    Async.waterfall([
+        function(cb) {
+            TokenDB.findByToken(token, config.TOKEN_TYPES.EMV, null, (err, tokenData) => {
+                if(err) {
+                    return cb(err);
+                }    
+                if(!tokenData) {
+                    utils.createResponse(req, res, 200, false, "Token might have expired")
+                    return cb(utils.createError('token expired', true));
+                }
+                cb(null, tokenData);
+            })
+        }, 
 
-        tokenData = tokenData.value;  
-        const cond = {email: tokenData.email, role: tokenData.role, em_verified : false}
-        const update = {$set : {em_verified : true, em_verified_on: new Date()}}
-        UserDB.findOneAndUpdate(cond, update, {rawResult : true})
-        .then((user) => {
-            if(!user.lastErrorObject.n) 
-                return utils.createResponse(req, res, 200, false, "Email is already verified!");
-            
-            utils.createAuthData(user)
-            .then((auth) => {
+        function(tokenData, cb) { 
+            UserDB.verifyEmail(tokenData, (err, user) => {
+                if(err) {
+                    return cb(err, null);
+                }
+                if(!user) {
+                    const message = "Email is already verified! Please sign in";
+                    utils.createResponse(req, res, 200, false, message);
+                    return cb(utils.createError(message, true))
+                }
+                cb(null, user);
+            })
+        },
+
+        function(user, cb) {
+            utils.createAuthData(user, (err, auth) => {
+                if(err) { // if err, user will not be automatically signed in but rest will work successfully.
+                    utils.createResponse(req, res, 200, true, "email is verified", null);
+                    return cb(null);
+                }
+
                 res.setHeader(config.ACC_TKN_HDR, auth.jwt)
-                return utils.createResponse(req, res, 200, true, "Email is verified", auth.user)
+                utils.createResponse(req, res, 200, true, "Email is verified", auth.user)
+                cb(null);
             })
-            .catch((error) => {
-                return next(error);
-            })
-        })
-        .catch((error) => {
-            next(error);
-        })
-    })
-    .catch((error) => {
-        return next(error);
+        },
+
+        function(cb) { // expire token
+            TokenDB.expireToken(token, (err, data) => {
+                if(err) {
+                    cb(utils.createError(err, true), null)
+                }
+                if(!data) {
+                    cb(utils.createError('Expire Token Failed', true))
+                }
+                cb(null, null);
+            });
+        }
+    ], function(err, result) {
+        console.log(err);
+        if(err && !err.handled) {
+            next(err, req, res, next);
+        }
     })
 }
