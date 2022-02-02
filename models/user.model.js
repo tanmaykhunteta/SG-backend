@@ -45,6 +45,7 @@ User.pre('save', function(next) {
     next();
 })
 
+
 /**
  * returns an mongo doc searched by email
  * 

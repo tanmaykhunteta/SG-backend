@@ -20,6 +20,7 @@ const Token = new Schema({
 
 Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, partialFilterExpression : {type : {$eq : config.TOKEN_TYPES.PSR}}})
 
+
 /**
  * returns an mongo doc searched by email
  * 
@@ -54,7 +55,6 @@ Token.statics.newEmailVerification = (details,token=null, cb=null) => {
             function(cb1) {
                 collection.deleteExistingToken(details.email, details.role, config.TOKEN_TYPES.EMV)
                 .then((data) => {
-                    console.log('deleted token', data)
                     cb1(null);
                 }).catch((error) => {
                     cb1(error, null)
@@ -62,7 +62,6 @@ Token.statics.newEmailVerification = (details,token=null, cb=null) => {
             },
 
             function(cb1) {
-                console.log('we not here?')
                 if(!token || typeof token != 'string') {
                     utils.generateRandomToken(48, 'hex')
                     .then((token)=>{
@@ -73,7 +72,6 @@ Token.statics.newEmailVerification = (details,token=null, cb=null) => {
             },
     
             function(token, cb1) {
-                console.log("here" + token)
                 const body = {tkn: token, email : details.email, role : details.role, type: config.TOKEN_TYPES.EMV, ip: details.ip}
                 const tokenData = new model(body);
                 tokenData.save()
@@ -92,7 +90,6 @@ Token.statics.newEmailVerification = (details,token=null, cb=null) => {
             };
 
             if(cb && typeof cb == "function"){
-                console.log("why");
                 cb(err, result);
             }else 
                 res(result);

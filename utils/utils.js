@@ -47,15 +47,17 @@ module.exports = {
 
 
 
-    createResponse : function(req, res, status, success, message, data = null) {
-        return res.status(status).json({
+    createResponse : function(req, res, status, success, message, data = null, code=null) {
+        const response = {
             status : status,
             method : req.method,
             api : req.url,
             success: success,
             message: message,
             data : data
-        }).end()
+        }
+        if(code) response.code = code;
+        return res.status(status).json(response).end()
     },
 
     /**

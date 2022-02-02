@@ -5,6 +5,7 @@ const utils = require('../utils/utils')
 const bcrypt = require('bcrypt')
 const mailer = require('../config/mailer');
 const config = require('../config/config');
+const constant = require('../config/constant')
 const passport = require('passport');
 
 exports.getUserSessionDetails = function(req, res, next) {
@@ -122,7 +123,7 @@ exports.verifyEmail = function(req, res, next) {
                     return cb(err);
                 }    
                 if(!tokenData) {
-                    utils.createResponse(req, res, 200, false, "Token might have expired")
+                    utils.createResponse(req, res, 200, false, "Token might have expired", null, constant.ERROR_CODES.tokenExpired)
                     return cb(utils.createError('token expired', true));
                 }
                 cb(null, tokenData);
@@ -136,7 +137,7 @@ exports.verifyEmail = function(req, res, next) {
                 }
                 if(!user) {
                     const message = "Email is already verified! Please sign in";
-                    utils.createResponse(req, res, 200, false, message);
+                    utils.createResponse(req, res, 200, false, message, null, constant.ERROR_CODES.emailAlVerified);
                     return cb(utils.createError(message, true))
                 }
                 cb(null, user);
