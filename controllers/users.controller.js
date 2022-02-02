@@ -125,3 +125,30 @@ exports.verifyEmail = function(req, res, next) {
         return next(error);
     })
 }
+
+exports.recaptcha = function(req,res,next) {
+    let token = req.body.recaptcha;
+    console.log(token);
+    const secretKey = "6Ld60lEeAAAAAPxmx4YkrY1dPlv6eaf2JTd-fMuZ";
+    const url =  `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}&remoteip=${req.connection.remoteAddress}`;
+    if(token === null || token === undefined){
+        res.status(201).send({success: false, message: "Token is empty or invalid"})
+        return console.log("token empty");
+      }
+      
+    request(url, function(err, response, body){
+        //the body is the data that contains success message
+        body = JSON.parse(body);
+        
+        //check if the validation failed
+        if(body.success !== undefined && !data.success){
+             res.send({success: false, 'message': "recaptcha failed"});
+             return console.log("failed")
+         }
+        
+        //if passed response success message to client
+         res.send({"success": true, 'message': "recaptcha passed"});
+        
+      })
+
+}
