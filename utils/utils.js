@@ -5,12 +5,12 @@ const crypto = require('crypto')
 module.exports = {
 
     createAuthData : function(details, cb=null) {
-        const tokenData = { user_id: details._id, email : details.email, fn: details.fn, ln: details.ln }
+        const tokenData = { _id: details._id, email : details.email, fn: details.fn, ln: details.ln, em_verified: details.em_verified }
         if(cb && typeof cb == "function") {
             module.exports.encodeJWT(tokenData, null, (err, token) => {cb(err, {user: tokenData, jwt: token})});
         } else {
             return new Promise((res, rej) => {
-                module.exports.encodeJWT(tokenData, (err, token) => {
+                module.exports.encodeJWT(tokenData, null, (err, token) => {
                     if(err) 
                         return rej(err);
                     res({user : tokenData, jwt : token});
@@ -32,10 +32,10 @@ module.exports = {
     encodeJWT : function(payload, expiresIn=null, callback=null) {
         const extraOptions = {expiresIn : expiresIn || config.JWT_CONFIG.EXPIRES_IN};
         if(callback && typeof callback == "function") {
-            jwt.sign(payload, config.JWT_CONFIG.SECRET, extraOptions, callback)
+            jwt.sign(payload, "secret101", extraOptions, callback)
         } else {
             return new Promise((res, rej)=> {
-                jwt.sign(payload, config.JWT_CONFIG.SECRET, extraOptions, (err, token)=>{
+                jwt.sign(payload, "secret101", extraOptions, (err, token)=>{
                     if(err) 
                         rej(err);
                     else 
@@ -47,15 +47,17 @@ module.exports = {
 
 
 
-    createResponse : function(req, res, status, success, message, data = null) {
-        return res.status(status).json({
+    createResponse : function(req, res, status, success, message, data = null, code=null) {
+        const response = {
             status : status,
             method : req.method,
             api : req.url,
             success: success,
             message: message,
             data : data
-        })
+        }
+        if(code) response.code = code;
+        return res.status(status).json(response).end()
     },
 
     /**
@@ -66,18 +68,42 @@ module.exports = {
      * @param {Function} cb (optional) (error, string) => void
      * @returns {Promise<String>} return Promise token/error only if no cb passed
      */
-    generateRandomToken : function(length, stringType, cb=null) {
-        if(cb && typeof cb == "function") 
-            return crypto.randomBytes(length, (err, buffer)=>{
-                cb(err, buffer.toString(stringType))
-            })
-
+    generateRandomToken : function(length, stringType, cb=null) { 
         return new Promise((res, rej) => {
             crypto.randomBytes(length, (err, buffer) => {
-                if(err) return rej(err);
+                if(err && !cb)
+                    return rej(err);
+
+                if(cb && typeof cb == "function") 
+                    cb(err, buffer.toString(stringType));
+
                 res(buffer.toString(stringType))
             })
         })
-    }
+    },
 
+    remoteIp : function(req) {
+        let IP = null;
+        if(req.headers['x-forwarded-for']) {
+            IP = req.headers['x-forwarded-for'].split(',').shift()
+        } else {
+            IP = req.socket.remoteAddress
+        }
+        console.log("req ip " + IP);
+        return IP
+    },
+
+
+    createError(error=null, handled=false) {
+        if(error instanceof Object) {
+            error.handled = handled;
+            return error;
+        } else {
+            errorObj = new Error()
+            errorObj.message = error
+            errorObj.handled = handled
+            return errorObj;
+        }
+
+    }
 }

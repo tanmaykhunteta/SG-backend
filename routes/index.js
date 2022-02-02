@@ -1,9 +1,8 @@
 var express = require('express');
-var router = express.Router();
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.status(200).json({success: true})
-});
+exports.initiateRoutes = (app) => {
+  console.count("routes initiated");
+  (require('./countries.route')).routes(app);
+  (require('./users.route')).routes(app);
+}
 
-module.exports = router;
