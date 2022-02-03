@@ -7,6 +7,7 @@ const mailer = require('../config/mailer');
 const config = require('../config/config');
 const constant = require('../config/constant')
 const passport = require('passport');
+const fetch = require("isomorphic-fetch");
 
 exports.getUserSessionDetails = function(req, res, next) {
 
@@ -177,28 +178,33 @@ exports.verifyEmail = function(req, res, next) {
 }
 
 exports.recaptcha = function(req,res,next) {
-    let token = req.body.recaptcha;
+    let token = req.body['recaptcha'];
     console.log(token);
-    const secretKey = "6Ld60lEeAAAAAPxmx4YkrY1dPlv6eaf2JTd-fMuZ";
+    const secretKey = "6LdPK1MeAAAAAIEKwcQczoGZ6ExBZqJVfjvU4Hul";
     const url =  `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}&remoteip=${req.connection.remoteAddress}`;
-    if(token === null || token === undefined){
-        res.status(201).send({success: false, message: "Token is empty or invalid"})
-        return console.log("token empty");
+    const name = req.body.name;
+    
+ 
+    // Making POST request to verify captcha
+    fetch(url, {
+        method: "post",
+    })
+    .then((response) => response.json())
+    .then((google_response) => {
+ 
+      // google_response is the object return by
+      // google as a response
+      if (google_response.success == true) {
+        //   if captcha is verified
+        return res.send({ response: "Successful" });
+      } else {
+        // if captcha is not verified
+        return res.send({ response: "Failed" });
       }
-      
-    request(url, function(err, response, body){
-        //the body is the data that contains success message
-        body = JSON.parse(body);
-        
-        //check if the validation failed
-        if(body.success !== undefined && !data.success){
-             res.send({success: false, 'message': "recaptcha failed"});
-             return console.log("failed")
-         }
-        
-        //if passed response success message to client
-         res.send({"success": true, 'message': "recaptcha passed"});
-        
-      })
+    })
+    .catch((error) => {
+        // Some error while verify captcha
+      return res.json({ error });
+    });
 
 }

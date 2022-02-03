@@ -31,12 +31,13 @@ function runAddCountries() {
 
     Promise.allSettled(promises)
     .then((result) => {
+        console.log(result);
         if(result.some((value) => value.status == 'rejected')) {
             console.log("========================= ended with error ============")
         } else {
             console.log("===================== Done ======="); 
         }
-        process.exit()
+        // process.exit()
     })
 }
 
