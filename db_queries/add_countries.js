@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const config = require('../config/config');
 const MaxBatchSize = 100;
 
-mongoose.connect(config.DB.URL).then(() => {
+mongoose.connect(config.DB.URL,{ useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
     console.log("connected to mongoose")
     runAddCountries();
 }).catch((error)=>{
