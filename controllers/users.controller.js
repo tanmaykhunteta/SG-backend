@@ -61,8 +61,7 @@ exports.register = function(req, res, next) {
             TransactionDb.signedUp(userDoc);
 
             userDoc.ip = utils.remoteIp(req);
-            TokenDB.newEmailVerification(userDoc, null, (err, doc) => {
-                console.log(err)
+            TokenDB.newEmailVerification(userDoc, null, (err, token) => {
                 if(err) return cb(utils.createError(err, true));
                 
                 mailer.emailVerification(body.email, body.fn, token)
@@ -72,7 +71,6 @@ exports.register = function(req, res, next) {
     ], 
 
     function(error, result) {
-        console.log('heell')
         if(error && !error.handled) {
             next(error, req, res, next)
         }

@@ -25,6 +25,7 @@ let transporter;
 
 module.exports.emailVerification = function(email, name, token) {
     const verifyLink = `${config.FRONTEND}/verify-email?token=${token}`
+    console.log(verifyLink)
     const mailData = {
         from: '"Survey" mailer@survey.com',
         to: email,

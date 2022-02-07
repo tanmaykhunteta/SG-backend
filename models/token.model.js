@@ -75,19 +75,17 @@ Token.statics.newEmailVerification = (details, token=null, cb=null) => {
             function(token, cb1) {
                 const body = {tkn: token, email : details.email, role : details.role, type: constants.TOKEN_TYPES.EMV, ip: details.ip}
                 const tokenData = new model(body);
-                tokenData.save()
-                .then((doc) => {
+                tokenData.save((err, doc) => {
+                    if(err) return cb1(err);
                     if(!doc) return cb1("could not save token", null);
-                    cb1(null, doc);
-                }).catch((error) => {
-                    cb1(error, null);
+                    cb1(null, doc.tkn);
                 })
             }
-        ], (err, result)=> {
+        ], (err, token)=> {
             if(err && !cb) return rej(err)
 
-            if(cb) cb(err, result);
-            res(result);
+            if(cb) cb(err, token);
+            res(token);
         })
     })
 }

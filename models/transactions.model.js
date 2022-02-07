@@ -53,7 +53,7 @@ Transaction.statics.signedUp = function(userDetails, cb=null) {
             function(cb1) {
                 mongoose.model(modelName).create(doc)
                 .then((savedDoc) => {
-                    if(!saveDoc) {
+                    if(!savedDoc) {
                         return cb1(utils.createError('unable to create transaction'), null);
                     }
 

@@ -29,7 +29,10 @@ exports.userSchema = {
         },
         "yob" : {
             "description" : "User's year of birth",
-            "type" : "number"
+            "anyOf" : [
+                {type: "string"},
+                {type : "number"}
+            ]
         },
         "age" : { "type" : "number", "minimum": constants.MIN_AGE, "maximum": constants.MAX_AGE},
         "cnfm_pswd" : { "type" : "string", "const" : {"$data" : "1/pswd"}},
