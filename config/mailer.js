@@ -20,7 +20,6 @@ let transporter;
         },
     });
 
-    // module.exports.emailVerification("deepak@gmail.com", "Deepak", "xyz")
  })()
 
 

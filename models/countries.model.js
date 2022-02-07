@@ -1,5 +1,6 @@
 const config = require('../config/config');
 const mongoose = require('mongoose');
+const utils = require('../utils/utils');
 const Schema = mongoose.Schema;
 const modelName = "countries"
 
@@ -27,7 +28,7 @@ const Country = new Schema({
 Country.statics.getCountryByCode = function(code, fields=null, cb=null) {
     cond = {cntry_code: code}
     const collection = mongoose.model(modelName)
-    if(cb && typeof cb == "function") {
+    if(utils.isCb(cb)) {
         return collection.findOne(cond, fields, {}, cb); //calls with cb (last argument)
     }
 
@@ -38,7 +39,7 @@ Country.statics.getCountryByCode = function(code, fields=null, cb=null) {
 Country.statics.getCountryByName = function(name, fields=null, cb=null) {
     cond = {cntry_nm: name}
     const collection = mongoose.model(modelName)
-    if(cb && typeof cb == "function") {
+    if(utils.isCb(cb)) {
         return collection.findOne(cond, fields, {}, cb);
     }
 

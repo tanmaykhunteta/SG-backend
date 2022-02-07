@@ -1,5 +1,7 @@
 const config = require('../config/config');
+const constants = require('../config/constant');
 const mongoose = require('mongoose');
+const utils = require('../utils/utils');
 const Schema = mongoose.Schema;
 const modelName = "users"
 
@@ -25,13 +27,15 @@ const User = new Schema({
     pswd : {type : String, required : true},
     em_verified : {type : Boolean, default : false},
     em_verified_on : Date,
-    gndr : {type: String, enum : ["male", "female", "others"]},
+    gndr : {type: String, enum : constants.GENDERS},
     yob : Number,
     age : Number,
     cntry : String,
+    ttl_reward : {type : Number, default : constants.REWARD_TYPES['signed_up']},
+    ttl_reward_claimed: {type: Number, default: 0}, 
     addr : Address,
     mob : Mobile,
-    role : {type: String, default: config.ROLES.USER},
+    role : {type: String, default: constants.ROLES.USER},
     prvcyPlcy: Boolean
 }, {
     timestamps : true
@@ -58,7 +62,7 @@ User.statics.findUserByEmail = (email, fields=null, cb=null) => {
     const cond = {email: email};
     fields = fields || {};
     const collection = mongoose.model(modelName)
-    if(cb && typeof cb == "function")
+    if(utils.isCb(cb))
         return collection.findOne(cond, fields, {}, cb);
 
     return collection.findOne(cond, fields)
@@ -70,7 +74,7 @@ User.statics.verifyEmail = (tokenData, cb=null) => {
     const update = {$set : {em_verified: true, em_verified_on : new Date()}}
     const options = {new: true}
     const collection = mongoose.model(modelName);
-    if(cb && typeof cb == 'function') {
+    if(utils.isCb(cb)) {
         return collection.findOneAndUpdate(cond, update, options, cb);
     }
 
