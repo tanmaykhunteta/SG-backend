@@ -1,8 +1,14 @@
-exports.ERROR_CODES = {}
-exports.ERROR_CODES['userAlExists'] = "user-already-exists"
-exports.ERROR_CODES['tokenExpired'] = "token-expired";
-exports.ERROR_CODES['emaAlVerified'] = "email-already-verified";
-exports.ERROR_CODES['validationErr'] = "validation-errors"
+exports.ERR_C = {}
+exports.ERR_C['userAlExists'] = "user-already-exists"
+exports.ERR_C['tokenExpired'] = "token-expired";
+exports.ERR_C['emaAlVerified'] = "email-already-verified";
+exports.ERR_C['validationErr'] = "validation-errors"
+exports.ERR_C['reCaptchaFailed'] = "recaptcha-failed"
+exports.ERR_C['internalError'] = "internal-error"
+
+
+exports.ERR= {}
+exports.ERR['internalError'] = 'sorry some error occured'
 
 
 exports.ROLES = {}

@@ -70,7 +70,7 @@ describe('Users', () => {
             .set("content-type", "application/json")
             .send(registerData)
             .end((err, res) => {
-                expect(res.body.code).to.be.a('string').eq(constants.ERROR_CODES['userAlExists']);
+                expect(res.body.code).to.be.a('string').eq(constants.ERR_C['userAlExists']);
                 done()
             })
         })
@@ -85,7 +85,7 @@ describe('Users', () => {
             .send(data)
             .end((err, res) => {
                 expect(res.status).to.be.eq(400);
-                expect(res.body).to.have.property('code', constants.ERROR_CODES['validationErr']);
+                expect(res.body).to.have.property('code', constants.ERR_C['validationErr']);
                 expect(res.body.data).to.be.an('object').to.have.property('validationErrors').an('array').length(1)
                 console.log(res.body);
                 done()

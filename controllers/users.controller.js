@@ -26,7 +26,7 @@ exports.register = function(req, res, next) {
 
         function(existingUser, cb) {
             if(existingUser) {
-                utils.createResponse(req, res, 200, false, "User already exists", null, constants.ERROR_CODES.userAlExists)
+                utils.createResponse(req, res, 200, false, "User already exists", null, constants.ERR_C.userAlExists)
                 return cb(utils.createError("user already exists", true))
             }
             
@@ -114,7 +114,7 @@ exports.verifyEmail = function(req, res, next) {
                     return cb(err);
                 }    
                 if(!tokenData) {
-                    utils.createResponse(req, res, 200, false, "Token might have expired", null, constants.ERROR_CODES.tokenExpired)
+                    utils.createResponse(req, res, 200, false, "Token might have expired", null, constants.ERR_C.tokenExpired)
                     return cb(utils.createError('token expired', true));
                 }
                 cb(null, tokenData);
@@ -128,7 +128,7 @@ exports.verifyEmail = function(req, res, next) {
                 }
                 if(!user) {
                     const message = "Email is already verified! Please sign in";
-                    utils.createResponse(req, res, 200, false, message, null, constants.ERROR_CODES.emailAlVerified);
+                    utils.createResponse(req, res, 200, false, message, null, constants.ERR_C.emailAlVerified);
                     return cb(utils.createError(message, true))
                 }
                 cb(null, user);
@@ -158,36 +158,4 @@ exports.verifyEmail = function(req, res, next) {
             next(err, req, res, next);
         }
     })
-}
-
-exports.recaptcha = function(req,res,next) {
-    let token = req.body['recaptcha'];
-    console.log(token);
-    const secretKey = "6LdPK1MeAAAAAIEKwcQczoGZ6ExBZqJVfjvU4Hul";
-    const url =  `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}&remoteip=${req.connection.remoteAddress}`;
-    const name = req.body.name;
-    
- 
-    // Making POST request to verify captcha
-    fetch(url, {
-        method: "post",
-    })
-    .then((response) => response.json())
-    .then((google_response) => {
- 
-      // google_response is the object return by
-      // google as a response
-      if (google_response.success == true) {
-        //   if captcha is verified
-        return res.send({ response: "Successful" });
-      } else {
-        // if captcha is not verified
-        return res.send({ response: "Failed" });
-      }
-    })
-    .catch((error) => {
-        // Some error while verify captcha
-      return res.json({ error });
-    });
-
 }

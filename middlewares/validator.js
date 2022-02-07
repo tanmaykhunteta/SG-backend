@@ -21,7 +21,6 @@ module.exports = {
      */
     validate : (schemaRef, apiName, dataField = 'body') => {
         return (req, res, next) => {
-            delete req.body.reCaptcha
             const data = {...req[dataField], apiPath : apiName}
             const validate = this.ajv.getSchema(schemaRef);
             if(validate(data)) {
@@ -29,7 +28,7 @@ module.exports = {
             } else {
                 const errors = [...validate.errors]
                 const erArr = errors.map((error) => error.instancePath.split('/')[1])
-                return utils.createResponse(req, res, 400, false, "validations failed", {validationErrors: erArr}, constants.ERROR_CODES['validationErr']);
+                return utils.createResponse(req, res, 400, false, "validations failed", {validationErrors: erArr}, constants.ERR_C['validationErr']);
             }
         }
     }
