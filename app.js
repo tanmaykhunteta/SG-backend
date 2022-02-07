@@ -12,7 +12,7 @@ const {applyPassportStrategies}  = require('./lib/passport.strategies');
 var app = express();
 
 
-mongoose.connect(config.DB.URL).then(() => {
+mongoose.connect(config.DB.URL,{ useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
   	console.log("connected to mongoose")
 }).catch((error)=>{
   	console.log('MongoDB connection error:', error);

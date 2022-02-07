@@ -10,4 +10,5 @@ exports.routes = (app) => {
     app.post('/users/register', userValidate('register'), userController.register);
     app.post('/users/login', userValidate('login'), userController.login);
     app.put('/users/verify-email', userController.verifyEmail);
+    app.post('/users/recaptcha', userController.recaptcha);
 }

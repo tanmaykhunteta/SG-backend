@@ -6,9 +6,9 @@
     
     exports.DB = {}
     exports.DB["COLLECTION"] = "SG"
-    exports.DB["URL"] = 'mongodb://localhost:27017/' + exports.DB.COLLECTION
-    
-    
+    exports.DB["URL"] = 'mongodb+srv://test:test@cluster0.auka2.mongodb.net/'+ exports.DB.COLLECTION +'?retryWrites=true&w=majority';
+
+
     exports.JWT_CONFIG = {
         SECRET : "secret101",
         EXPIRES_IN : 3600
