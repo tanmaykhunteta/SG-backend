@@ -1,4 +1,5 @@
 const config = require('../config/config');
+const constants = require('../config/constant')
 const mongoose = require('mongoose');
 const utils = require('../utils/utils');
 const Async = require('async');
@@ -9,8 +10,8 @@ const modelName = "tokens"
 const Token = new Schema({ 
     tkn : {type : String, unique : true},
     email : {type : String, index:true, required: true},
-    role : {type: String, enum : config.ROLES, required: true},
-    type : {type: String, enum : config.TOKEN_TYPES_ENUM},
+    role : {type: String, enum : constants.ROLES.values, required: true},
+    type : {type: String, enum : constants.TOKEN_TYPES.values},
     rqtIP : String,
     expired : {type: Boolean, default: false},
     createdAt : {type: Date, index: true}
@@ -18,22 +19,21 @@ const Token = new Schema({
     timestamps : true
 })
 
-Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, partialFilterExpression : {type : {$eq : config.TOKEN_TYPES.PSR}}})
+Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, partialFilterExpression : {type : {$eq : constants.TOKEN_TYPES.PSR}}})
 
 
 /**
- * returns an mongo doc searched by email
+ * returns an Token doc searched by token and type
  * 
  * @param {String} token
- * @param {String} type
  * @param {String | Object} fields (optional) space separated field string or object
  * @returns {Promise<Token>} returns Promise if no callback passe
  */
-Token.statics.findByToken = (token, type, fields=null, cb=null) => {
-    const cond = {tkn: token, type: type}
+Token.statics.findByToken = (token, fields=null, cb=null) => {
+    const cond = {tkn: token}
     fields = fields || {}
     const collection = mongoose.model(modelName)
-    if(cb && typeof cb == "function")
+    if(utils.isCb(cb))
         return collection.findOne(cond, fields, {}, cb)
 
     return collection.findOne(cond, fields)
@@ -48,12 +48,13 @@ Token.statics.findByToken = (token, type, fields=null, cb=null) => {
  * @param {Function} cb (optional) (err, result)
  * @returns {Promise}
  */
-Token.statics.newEmailVerification = (details,token=null, cb=null) => {
+Token.statics.newEmailVerification = (details, token=null, cb=null) => {
+    cb = utils.isCb(cb)
     const collection = mongoose.model(modelName);
     return new Promise((res, rej)=>{
         Async.waterfall([
             function(cb1) {
-                collection.deleteExistingToken(details.email, details.role, config.TOKEN_TYPES.EMV)
+                collection.deleteExistingToken(details.email, details.role, constants.TOKEN_TYPES.EMV)
                 .then((data) => {
                     cb1(null);
                 }).catch((error) => {
@@ -72,27 +73,19 @@ Token.statics.newEmailVerification = (details,token=null, cb=null) => {
             },
     
             function(token, cb1) {
-                const body = {tkn: token, email : details.email, role : details.role, type: config.TOKEN_TYPES.EMV, ip: details.ip}
+                const body = {tkn: token, email : details.email, role : details.role, type: constants.TOKEN_TYPES.EMV, ip: details.ip}
                 const tokenData = new model(body);
-                tokenData.save()
-                .then((doc) => {
+                tokenData.save((err, doc) => {
+                    if(err) return cb1(err);
                     if(!doc) return cb1("could not save token", null);
-                    cb1(null, doc);
-                }).catch((error) => {
-                    cb1(error, null);
+                    cb1(null, doc.tkn);
                 })
             }
-        ], (err, result)=> {
-            console.log(err);
-            if(err) {
-                if(!cb) 
-                    return rej(err)
-            };
+        ], (err, token)=> {
+            if(err && !cb) return rej(err)
 
-            if(cb && typeof cb == "function"){
-                cb(err, result);
-            }else 
-                res(result);
+            if(cb) cb(err, token);
+            res(token);
         })
     })
 }
@@ -107,13 +100,13 @@ Token.statics.newEmailVerification = (details,token=null, cb=null) => {
  * @returns {Promise}
  */
 Token.statics.newPasswordReset = async (details, token=null, cb=null) => {
+    cb = utils.isCb(cb);
     return new Promise((res, rej)=>{
         const collection = mongoose.model(modelName);
         Async.waterfall([
             function(cb1) {
-                collection.deleteExistingToken(details.email, details.role, config.TOKEN_TYPES.PSR)
+                collection.deleteExistingToken(details.email, details.role, constants.TOKEN_TYPES.PSR)
                 .then((data) => {
-                    console.log('deleted token', data)
                     cb1(null);
                 }).catch((error) => {
                     cb1(error, null)
@@ -131,7 +124,7 @@ Token.statics.newPasswordReset = async (details, token=null, cb=null) => {
             },
     
             function(token, cb1) {
-                const body = {tkn: token, email : details.email, role : details.role, type: config.TOKEN_TYPES.PSR, ip: details.ip}
+                const body = {tkn: token, email : details.email, role : details.role, type: constants.TOKEN_TYPES.PSR, ip: details.ip}
                 const tokenData = new model(body);
                 tokenData.save()
                 .then((doc) => {
@@ -142,15 +135,10 @@ Token.statics.newPasswordReset = async (details, token=null, cb=null) => {
                 })
             }
         ], (err, result)=> {
-            if(err) {
-                if(!cb) 
-                    return rej(err)
-            };
+            if(err && !cb) return rej(err)
 
-            if(cb && typeof cb == "function")
-                cb(err, result);
-            else 
-                res(result);
+            if(cb) cb(err, result);
+            res(result);
         })
     })
 }
@@ -170,7 +158,7 @@ Token.statics.deleteExistingToken = (email, role, type, cb=null) => {
 
     // return collection.deleteOne(cond)
     const update = {$set: {expired: true}};
-    if(cb && typeof cb == "function") 
+    if(utils.isCb(cb)) 
         return collection.updateMany(cond, update, cb);
     
     return collection.updateMany(cond, update);
@@ -180,7 +168,7 @@ Token.statics.deleteExistingToken = (email, role, type, cb=null) => {
 Token.statics.expireEMVToken = (token, cb=null) => {
     const cond = {tkn : token};
     const collection = mongoose.model(modelName);
-    if(cb && typeof cb == "function") 
+    if(utils.isCb(cb)) 
         return collection.deleteOne(cond, {}, (err, result)=> {
             cb(err, result.deletedCount)
         });

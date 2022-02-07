@@ -1,7 +1,6 @@
-var express = require('express');
-
 exports.initiateRoutes = (app) => {
-  console.count("routes initiated");
+  console.log("------------- building routes ------------");
+
   (require('./countries.route')).routes(app);
   (require('./users.route')).routes(app);
 }
