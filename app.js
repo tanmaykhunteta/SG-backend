@@ -13,7 +13,7 @@ var app = express();
 
 
 mongoose.connect(config.DB.URL,{ useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
-  	console.log("connected to mongoose")
+  	console.log("connected to mongoose " + config.DB.URL)
 }).catch((error)=>{
   	console.log('MongoDB connection error:', error);
 })

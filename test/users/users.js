@@ -27,14 +27,16 @@ describe('Users', () => {
         "reCaptcha" : "xya"
     }
 
-    before((done) => {
-        const promise = [UsersDB.deleteMany({}),
+    before(() => {
+        const promise = [
+            UsersDB.deleteMany({}),
         
-        TransactionsDB.deleteMany({}),
+            TransactionsDB.deleteMany({}),
 
-        TokenDB.deleteMany({})]
+            TokenDB.deleteMany({})
+        ]
 
-        Promise.allSettled(promise).then(() => done())
+        return Promise.allSettled(promise)
     });
 
 

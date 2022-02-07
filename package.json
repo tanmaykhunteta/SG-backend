@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "test": "set NODE_ENV=test && mocha",
+    "test": "export NODE_ENV='test' && mocha",
     "start:deb": "DEBUG=* node ./bin/www",
     "start": "node ./bin/www"
   },
