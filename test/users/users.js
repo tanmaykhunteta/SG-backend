@@ -108,10 +108,16 @@ describe('Users', () => {
                     console.log(res.body);
                     expect(err).to.be.null;
                     checkAuthData(res);
-                    
-                    TokenDB.findOne({tkn : token}, {}, {}, (err, doc)=> {
-                        expect(doc).to.be.null
-                        done()
+                    expect(res.body.data.auth.ttl_reward).eq(constants.REWARD_TYPES.signed_up + constants.REWARD_TYPES.email_verified)
+                    TransactionsDB.findOne({pid : res.body.data.auth._id, type: constants.REWARD_TYPES['email_verified']}, {}, {}, (err, doc) => {
+                        expect(err).to.be.null
+                        expect(doc).to.be.an("object")
+                        expect(doc).to.have.property('reward').eq(constants.REWARD_TYPES['email_verified']);
+
+                        TokenDB.findOne({tkn : token}, {}, {}, (err, doc)=> {
+                            expect(doc).to.be.null
+                            done()
+                        })
                     })
                 })
             })

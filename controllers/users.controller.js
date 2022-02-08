@@ -9,8 +9,12 @@ const config = require('../config/config');
 const constants = require('../config/constant')
 
 exports.getUserSessionDetails = function(req, res, next) {
+    delete req.user.iat;
+    delete req.user.exp;
     utils.createResponse(req, res, 200, true, "user session found", req.user);
 }
+
+
 
 exports.register = function(req, res, next) {
     let body = utils.bulkLower(req.body, {only : "fn ln email cntry gndr"})
@@ -68,9 +72,7 @@ exports.register = function(req, res, next) {
                 cb(null)  
             })
         },
-    ], 
-
-    function(error, result) {
+    ], function cbHandler(error, result) {
         if(error && !error.handled) {
             next(error, req, res, next)
         }
@@ -134,14 +136,6 @@ exports.verifyEmail = function(req, res, next) {
         },
 
         function(user, cb) {
-            TokenDB.expireEMVToken(token, (err, data) => {
-                if(err) cb(utils.createError(err, true), null)
-                
-                if(!data)  cb(utils.createError('Expire Token Failed', true))
-                
-                cb(null, null);
-            });
-
             utils.createAuthData(user, (err, auth) => {
                 if(err) { // if err, user will not be automatically signed in but rest will work successfully.
                    return utils.createResponse(req, res, 200, true, "email is verified", null);
@@ -150,8 +144,31 @@ exports.verifyEmail = function(req, res, next) {
                 res.setHeader(config.ACC_TKN_HDR, auth.jwt)
                 utils.createResponse(req, res, 200, true, "Email is verified", {auth : auth?.user})
             })
+
+            Async.parallel(
+                Async.reflectAll({
+                    token : function(cb1) {
+                        TokenDB.expireEMVToken(token, (err, doc)=>{
+                            if(err) return cb1(utils.createError(result[0].reason, true), null)
+                            if(!doc) return cb1(utils.createError('Expire Token Failed', true))
+                            cb1(doc);
+                        })
+                    },
+                    transaction :   function(cb1) {
+                        TransactionDb.emailVerified(user, (err, doc) => {
+                            if(err) return  cb1(utils.createError(err, true), null)
+                            if(!doc) return cb1(utils.createError("Couldn't add verify email transaction", true))
+                            cb1(doc);
+                        })
+                    }
+            }), function cb1Handler(err, r) {
+                console.log(err);
+                console.log(r.token.error);
+                console.log(r.transaction.error);
+                cb(null, r);
+            })
         },
-    ], function(err, result) {
+    ], function cbHandler(err, result) {
         if(err && !err.handled) {
             next(err, req, res, next);
         }

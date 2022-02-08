@@ -71,7 +71,7 @@ User.statics.findUserByEmail = (email, fields=null, cb=null) => {
 
 User.statics.verifyEmail = (tokenData, cb=null) => {
     const cond = {email:tokenData.email, role: tokenData.role, em_verified : false}
-    const update = {$set : {em_verified: true, em_verified_on : new Date()}}
+    const update = {$set : {em_verified: true, em_verified_on : new Date()}, $inc: {ttl_reward : constants.REWARD_TYPES.email_verified}}
     const options = {new: true}
     const collection = mongoose.model(modelName);
     if(utils.isCb(cb)) {

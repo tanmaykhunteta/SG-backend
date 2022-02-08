@@ -14,7 +14,6 @@
 
     exports.DB = {}
     exports.DB["COLLECTION"] = "SG";
-    exports.DB["URL"] = 'mongodb://localhost:27017/' + exports.DB.COLLECTION
 
     exports.NODE_MAILER = {}
     exports.NODE_MAILER["HOST"] = "smtp.ethereal.email"
@@ -37,6 +36,9 @@
     if(process.env.NODE_ENV == "test") {
         exports.DB["COLLECTION"] = "SG-TEST";
     }
+
+
+    exports.DB["URL"] = 'mongodb://localhost:27017/' + exports.DB.COLLECTION
 
 
 

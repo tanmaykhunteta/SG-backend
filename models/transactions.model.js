@@ -49,40 +49,48 @@ Transaction.statics.signedUp = function(userDetails, cb=null) {
             txn_st : constants.TRANS_ST['completed'],
         };
 
-        Async.waterfall([
-            function(cb1) {
-                mongoose.model(modelName).create(doc)
-                .then((savedDoc) => {
-                    if(!savedDoc) {
-                        return cb1(utils.createError('unable to create transaction'), null);
-                    }
-
-                    cb1(null, savedDoc);
-                })
-                .catch((error) => {
-                    cb1(error);
-                })
-            },
-
-            // function(savedDoc, cb1) {
-            //     const cond = {_id : doc.pid},
-            //     const update = {$inc : doc.reward}
-            //     User.updateOne(cond, update, {}, (err, doc) => {
-            //         if(err) {
-            //             return cb1(err)
-            //         }
-            //         if(!doc.nUpdated)
-            //             return cb1(utils.createError('couldn\'t update reward balance for user'))
-            //         cb(null, null);  
-            //     })
-            // }
-        ], function(err, data) {
-            if(err && !cb) return rej(err);
-            if(cb) cb(err, data);
-            res(data);
+        mongoose.model(modelName).create(doc)
+        .then((savedDoc) => {
+            if(!savedDoc && !cb) 
+                return rej(utils.createError('unable to create transaction'));
+            
+            if(cb) cb(null, savedDoc)
+            res(savedDoc)
+        })
+        .catch((error) => {
+            if(cb) cb(error, null);
+            rej(error);
         })
     })
 }
+
+
+Transaction.statics.emailVerified = function(userDetails, cb=null) {
+    cb = utils.isCb(cb);
+    new Promise((res, rej) => {
+        const doc = {
+            pid : userDetails._id,
+            txn_type: constants.TRANS_TYPES['email_verified'],
+            reward : constants.REWARD_TYPES['email_verified'],
+            txn_st : constants.TRANS_ST['completed'],
+        };
+
+        mongoose.model(modelName).create(doc)
+        .then((savedDoc) => {
+            if(!savedDoc && !cb) {
+                return rej(utils.createError('unable to create transaction'));
+            }
+            
+            if(cb) (null, savedDoc);
+            res(savedDoc);
+        })
+        .catch((error) => {
+            if(cb) cb(error);
+            rej(error);
+        })
+    })
+}
+
 
 
 
