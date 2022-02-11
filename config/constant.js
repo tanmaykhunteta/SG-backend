@@ -5,6 +5,7 @@ exports.ERR_C['emaAlVerified'] = "email-already-verified";
 exports.ERR_C['validationErr'] = "validation-errors"
 exports.ERR_C['reCaptchaFailed'] = "recaptcha-failed"
 exports.ERR_C['internalError'] = "internal-error"
+exports.ERR_C['userNoExists'] = "user-does-not-exists";
 
 
 exports.ERR= {}

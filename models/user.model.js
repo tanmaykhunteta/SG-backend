@@ -81,6 +81,19 @@ User.statics.verifyEmail = (tokenData, cb=null) => {
     return collection.findOneAndUpdate(cond, update, options);
 }
 
+User.statics.resetPswd = (tokenData, cb=null) => {
+    const cond = {email:tokenData.email}
+    console.log(tokenData);
+    const update = {'pswd': tokenData.pswd}
+    const options = {new: true}
+    const collection = mongoose.model(modelName);
+    if(utils.isCb(cb)) {
+        return collection.findOneAndUpdate(cond, update, options, cb);
+    }
+
+    return collection.findOneAndUpdate(cond, update, options);
+}
+
 
 const model = mongoose.model(modelName, User);
 module.exports = model;

@@ -10,4 +10,7 @@ exports.routes = (app) => {
     app.post('/users/register', reCaptcha.Validate, userValidate('register'), userController.register);
     app.post('/users/login', reCaptcha.Validate, userValidate('login'), userController.login);
     app.put('/users/verify-email', userController.verifyEmail);
+    app.post('/users/request-reset-password',reCaptcha.Validate, userController.reqResetPswd );
+    app.put('/users/reset-password', reCaptcha.Validate, userController.resetPassword);
+    app.post('/users/verify-token', userController.verifyToken);
 }
