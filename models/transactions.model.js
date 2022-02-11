@@ -25,70 +25,40 @@ const Transaction = new Schema({
  * 
  * @param {String} token
  * @param {String | Object} fields (optional) space separated field string or object
- * @returns {Promise<Token>} returns Promise if no callback passed
+ * @returns {Transaction} Promise if no callback passed
  */
-Transaction.statics.findByID = (id, fields=null, cb=null) => {
+Transaction.statics.findByID = async (id, fields=null) => {
     const cond = {_id}
     fields = fields || {}
     const collection = mongoose.model(modelName)
-    if(utils.isCb(cb))
-        return collection.findOne(cond, fields, {}, cb)
-
-    return collection.findOne(cond, fields)
+    return await collection.findOne(cond, fields)
 } 
 
 
 
-Transaction.statics.signedUp = function(userDetails, cb=null) {
-    cb = utils.isCb(cb);
-    new Promise((res, rej) => {
-        const doc = {
-            pid : userDetails._id,
-            txn_type: constants.TRANS_TYPES['signed_up'],
-            reward : constants.REWARD_TYPES['signed_up'],
-            txn_st : constants.TRANS_ST['completed'],
-        };
+Transaction.statics.signedUp = async function(userDetails) {
+    const doc = {
+        pid : userDetails._id,
+        txn_type: constants.TRANS_TYPES['signed_up'],
+        reward : constants.REWARD_TYPES['signed_up'],
+        txn_st : constants.TRANS_ST['completed'],
+    };
 
-        mongoose.model(modelName).create(doc)
-        .then((savedDoc) => {
-            if(!savedDoc && !cb) 
-                return rej(utils.createError('unable to create transaction'));
-            
-            if(cb) cb(null, savedDoc)
-            res(savedDoc)
-        })
-        .catch((error) => {
-            if(cb) cb(error, null);
-            rej(error);
-        })
-    })
+    const savedDoc = await mongoose.model(modelName).create(doc)
+    return savedDoc;
 }
 
 
-Transaction.statics.emailVerified = function(userDetails, cb=null) {
-    cb = utils.isCb(cb);
-    new Promise((res, rej) => {
-        const doc = {
-            pid : userDetails._id,
-            txn_type: constants.TRANS_TYPES['email_verified'],
-            reward : constants.REWARD_TYPES['email_verified'],
-            txn_st : constants.TRANS_ST['completed'],
-        };
+Transaction.statics.emailVerified = async function(userDetails) {
+    const doc = {
+        pid : userDetails._id,
+        txn_type: constants.TRANS_TYPES['email_verified'],
+        reward : constants.REWARD_TYPES['email_verified'],
+        txn_st : constants.TRANS_ST['completed'],
+    };
 
-        mongoose.model(modelName).create(doc)
-        .then((savedDoc) => {
-            if(!savedDoc && !cb) {
-                return rej(utils.createError('unable to create transaction'));
-            }
-            
-            if(cb) (null, savedDoc);
-            res(savedDoc);
-        })
-        .catch((error) => {
-            if(cb) cb(error);
-            rej(error);
-        })
-    })
+    const savedDoc = await mongoose.model(modelName).create(doc)
+    return savedDoc
 }
 
 

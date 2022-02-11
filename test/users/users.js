@@ -1,4 +1,3 @@
-let mongoose = require("mongoose");
 let UsersDB = require('../../models/user.model');
 let TokenDB = require('../../models/token.model');
 let TransactionsDB = require('../../models/transactions.model')
@@ -7,7 +6,6 @@ let constants = require('../../config/constant');
 let chai = require('chai');
 let chaiHttp = require('chai-http');
 let server = require('../../app');
-const { object } = require("joi");
 let expect = chai.expect;
 
 
@@ -41,33 +39,29 @@ describe('Users', () => {
 
 
     describe('/POST register user', () => {
-        it('add a new user to db, add a signup reward transaction, new token for email verification and return auth token and auth details', (done) => {
-            chai.request(server)
-            .post('/users/register')
-            .set('Content-Type', 'application/json')
-            .send(registerData)
-            .end((err, res) => {
-                expect(err).to.be.null
-                expect(res.status).to.be.eq(202, 'status not 202');
-                checkAuthData(res);
-                TransactionsDB.findOne({pid : res.body.data.auth._id, txn_type: constants.TRANS_TYPES['signed_up']}, {}, {}, (err, transaction) => {
-                    expect(err).to.be.null
-                    expect(transaction).to.be.an('object', 'sign up transaction not added');
-                    expect(transaction.reward).to.be.eq(constants.REWARD_TYPES['signed_up']);
-                    TokenDB.findOne({email: res.body.data.auth.email, type:  constants.TOKEN_TYPES['EMV']}, (err, token) => {
-                        expect(err).to.be.null
-                        expect(token).to.be.an('object', 'token not created');
-                        done()
-                    })
-                });
-            })
+        let gRes //globalResponse
+        it('add a new user to db and return x-access-token with user auth data', async() => {
+            const res = await chai.request(server).post('/users/register').send(registerData)
+            expect(res.status).to.be.eq(202, 'status not 202');
+            checkAuthData(res);
+            gRes = res;
         });
+
+        it("should have a new sign up transaction in db", async() => {
+            const transaction = await TransactionsDB.findOne({pid : gRes.body.data.auth._id, txn_type: constants.TRANS_TYPES['signed_up']})
+            expect(transaction).to.be.an('object', 'sign up transaction not added');
+            expect(transaction.reward).to.be.eq(constants.REWARD_TYPES['signed_up']);
+        })
+
+        it("should have a new registration token in Token db", async() => {
+            const token = await TokenDB.findOne({email: gRes.body.data.auth.email, type:  constants.TOKEN_TYPES['EMV']})
+            expect(token).to.be.an('object', 'token not created');
+        })
 
 
         it("should give user already exists error", (done) => {
             chai.request(server)
             .post('/users/register')
-            .set("content-type", "application/json")
             .send(registerData)
             .end((err, res) => {
                 expect(res.body.code).to.be.a('string').eq(constants.ERR_C['userAlExists']);
@@ -77,65 +71,59 @@ describe('Users', () => {
 
         
         
-        it("should give validation error", (done) => {
+        it("should give validation error", async() => {
             const data = {...registerData, fn: undefined, prvcyPlcy: false}
-            chai.request(server)
-            .post('/users/register')
-            .set("content-type", 'application/json')
-            .send(data)
-            .end((err, res) => {
-                expect(res.status).to.be.eq(400);
-                expect(res.body).to.have.property('code', constants.ERR_C['validationErr']);
-                expect(res.body.data).to.be.an('object').to.have.property('validationErrors').an('array').length(1)
-                console.log(res.body);
-                done()
-            })
+            const res = await chai.request(server).post('/users/register').send(data)
+            expect(res.status).to.be.eq(400);
+            expect(res.body).to.have.property('code', constants.ERR_C['validationErr']);
+            expect(res.body.data).to.be.an('object').to.have.property('validationErrors').an('array').length(1)
         })
     });
 
 
     describe('PUT /users/verify-email', () => {
-        it('verifies user email, logs user in and removes email Token from token db', (done) => {
-            TokenDB.findOne({email: registerData.email.toLowerCase()}, (err, doc) => {
-                expect(doc).to.be.an('object');
-                const token  = doc.tkn;
+        let gRes;
+        let gToken;
+        it('verifies user email, logs user in and removes email Token from token db', async() => {
+            const doc = await TokenDB.findOne({email: registerData.email.toLowerCase()}); 
+            expect(doc).to.be.an('object');
+            gToken  = doc.tkn;
                 
-                chai.request(server)
-                .put("/users/verify-email")
-                .set("content-type", "application/json")
-                .send({token})
-                .end((err, res) => {
-                    console.log(res.body);
-                    expect(err).to.be.null;
-                    checkAuthData(res);
-                    expect(res.body.data.auth.ttl_reward).eq(constants.REWARD_TYPES.signed_up + constants.REWARD_TYPES.email_verified)
-                    TransactionsDB.findOne({pid : res.body.data.auth._id, type: constants.REWARD_TYPES['email_verified']}, {}, {}, (err, doc) => {
-                        expect(err).to.be.null
-                        expect(doc).to.be.an("object")
-                        expect(doc).to.have.property('reward').eq(constants.REWARD_TYPES['email_verified']);
+            const res = await chai.request(server).put("/users/verify-email").send({token : gToken})
+            checkAuthData(res);
+            expect(res.body.data.auth.ttl_reward).eq(constants.REWARD_TYPES.signed_up + constants.REWARD_TYPES.email_verified);
+            gRes = res;
+        });
 
-                        TokenDB.findOne({tkn : token}, {}, {}, (err, doc)=> {
-                            expect(doc).to.be.null
-                            done()
-                        })
-                    })
-                })
-            })
+        if('should have email verified transaction in transactions', async() => {
+            const transaction = await TransactionsDB.findOne({pid : gRes.body.data.auth._id, type: constants.REWARD_TYPES['email_verified']})
+            expect(transaction).to.be.an("object")
+            expect(transaction).to.have.property('reward').eq(constants.REWARD_TYPES['email_verified']);
+        })
+
+        it("should not have sign up token in tokenDB", async() => {
+            const token = await TokenDB.findOne({tkn : gToken}, {}, {})
+            expect(token).to.be.null
+        })
+
+        it('should return emAlVerified code', async() => {
+            const res = await chai.request(server).put('/users/verify-email').send({token: gToken})
+            expect(res.status).to.be.eq(422)
+            expect(res.body).to.have.property('code').eq(constants.ERR_C.tokenExpired)
         })
     })
 
+
     describe('POST /users/login', () => {
-        it('logs in successfully and responds with x-access-token and user data', (done) => {
-            chai.request(server)
-            .post('/users/login')
-            .set("content-type", "application/json")
-            .send({email: registerData.email, pswd: registerData.pswd})
-            .end((err, res) => {
-                expect(res.status).to.be.eq(200);
-                checkAuthData(res);
-                console.log(res.body);
-                done()
-            })
+        it('logs in successfully and responds with x-access-token and user data', async() => {
+            const res = await chai.request(server).post('/users/login').send({email: registerData.email, pswd: registerData.pswd})
+            expect(res.status).to.be.eq(200);
+            checkAuthData(res);
+        })
+
+        it('login should return 400', async() => {
+            const res = await chai.request(server).post('/users/login').send({email : "unregistered@email.com", pswd : "somepassword"})
+            expect(res.status).to.be.eq(400)
         })
     })
 });

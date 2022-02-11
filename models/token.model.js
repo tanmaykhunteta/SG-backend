@@ -25,18 +25,15 @@ Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, parti
 /**
  * returns an Token doc searched by token and type
  * 
- * @param {String} token
- * @param {String | Object} fields (optional) space separated field string or object
- * @returns {Promise<Token>} returns Promise if no callback passe
+ * @param {string} token
+ * @param {string | Object} fields (optional) space separated field string or object
+ * @returns {string} returns Promise if no callback passe
  */
-Token.statics.findByToken = (token, fields=null, cb=null) => {
+Token.statics.findByToken = async (token, fields=null) => {
     const cond = {tkn: token}
     fields = fields || {}
     const collection = mongoose.model(modelName)
-    if(utils.isCb(cb))
-        return collection.findOne(cond, fields, {}, cb)
-
-    return collection.findOne(cond, fields)
+    return await collection.findOne(cond, fields)
 } 
 
 
@@ -45,49 +42,25 @@ Token.statics.findByToken = (token, fields=null, cb=null) => {
  * 
  * @param {Object} details details : email, role, requesterIp
  * @param {String} token unique token to verify user, generates token, if no token provided 
- * @param {Function} cb (optional) (err, result)
- * @returns {Promise}
+ * @returns {string} token
  */
-Token.statics.newEmailVerification = (details, token=null, cb=null) => {
-    cb = utils.isCb(cb)
+Token.statics.newEmailVerification = async(details, token=null) => {
     const collection = mongoose.model(modelName);
-    return new Promise((res, rej)=>{
-        Async.waterfall([
-            function(cb1) {
-                collection.deleteExistingToken(details.email, details.role, constants.TOKEN_TYPES.EMV)
-                .then((data) => {
-                    cb1(null);
-                }).catch((error) => {
-                    cb1(error, null)
-                })
-            },
+    await collection.deleteExistingToken(details.email, details.role, constants.TOKEN_TYPES.EMV)
 
-            function(cb1) {
-                if(!token || typeof token != 'string') {
-                    utils.generateRandomToken(48, 'hex')
-                    .then((token)=>{
-                        if(!token) return cb1("error in generating cb", null)
-                        cb1(null, token);
-                    }).catch((error) => cb1(error));
-                }
-            },
+    if(!token || typeof token != 'string') {
+        token = await utils.generateRandomToken(48, 'hex')
+        if(!token) 
+            throw new Error("error in generating cb")
+    }
     
-            function(token, cb1) {
-                const body = {tkn: token, email : details.email, role : details.role, type: constants.TOKEN_TYPES.EMV, ip: details.ip}
-                const tokenData = new model(body);
-                tokenData.save((err, doc) => {
-                    if(err) return cb1(err);
-                    if(!doc) return cb1("could not save token", null);
-                    cb1(null, doc.tkn);
-                })
-            }
-        ], (err, token)=> {
-            if(err && !cb) return rej(err)
+    const body = {tkn: token, email : details.email, role : details.role, type: constants.TOKEN_TYPES.EMV, ip: details.ip}
+    const tokenData = new model(body);
+    const doc = await tokenData.save()
+    if(!doc) 
+        throw new Error("could not save token");
 
-            if(cb) cb(err, token);
-            res(token);
-        })
-    })
+    return doc.tkn
 }
 
 
@@ -153,10 +126,7 @@ Token.statics.newPasswordReset = async (details, token=null, cb=null) => {
 Token.statics.deleteExistingToken = (email, role, type, cb=null) => {
     const cond = {email, role, type};
     const collection = mongoose.model(modelName)
-    // if(cb && typeof cb == "function") 
-    //     return collection.deleteOne(cond, {}, cb)
 
-    // return collection.deleteOne(cond)
     const update = {$set: {expired: true}};
     if(utils.isCb(cb)) 
         return collection.updateMany(cond, update, cb);
@@ -165,15 +135,10 @@ Token.statics.deleteExistingToken = (email, role, type, cb=null) => {
 }
 
 
-Token.statics.expireEMVToken = (token, cb=null) => {
+Token.statics.expireEMVToken = async(token) => {
     const cond = {tkn : token};
     const collection = mongoose.model(modelName);
-    if(utils.isCb(cb)) 
-        return collection.deleteOne(cond, {}, (err, result)=> {
-            cb(err, result.deletedCount)
-        });
-
-    return collection.deleteOne(cond);
+    return await collection.deleteOne(cond);
 }
 
 
