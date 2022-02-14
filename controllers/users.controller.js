@@ -6,7 +6,8 @@ const utils = require('../utils/utils')
 const bcrypt = require('bcrypt')
 const mailer = require('../config/mailer');
 const config = require('../config/config');
-const constants = require('../config/constant')
+const constants = require('../config/constant');
+const { carefully } = require('../utils/utils');
 
 
 exports.getUserSessionDetails = function(req, res, next) {
@@ -21,49 +22,41 @@ exports.register = async function(req, res, next) {
     let body = utils.bulkLower(req.body, {only : "fn ln email cntry gndr"})
     body = utils.bulkTrim(body)
     
-    let hashedPswd;
     try {
         const existingUser = await UserDB.findUserByEmail(body.email, "_id");
         if(existingUser) 
             return utils.createResponse(req, res, 409, false, constants.ERR_C.userAlExists, null, constants.ERR_C.userAlExists)    
+            
+            
+        let hashedPswd = await bcrypt.hash(body.pswd, 10)
+        if(!hashedPswd)
+            return next(utils.createError('unable to hash password'));
         
-    } catch(error) {
-        return next(error);
-    }
-        
-    hashedPswd = await bcrypt.hash(body.pswd, 10).catch((error) => null)
-    if(!hashedPswd)
-        return next(utils.createError('unable to save password'));
-    
-    let userDoc;
-    try {
         const {cnfm_pswd, ...dataToSave} = {...body, pswd : hashedPswd};
         const user = new UserDB(dataToSave)
-        userDoc = await user.save()
-        if(!userDoc) 
-            return next(utils.createError("Could not sign up"));
-    } catch(error) {
-        return next(utils.createError("Error occured while saving user"));
-    }
-    
 
-    const auth = await utils.createAuthData(userDoc).catch((error) => null)
-    if(auth) 
-        res.setHeader(config.ACC_TKN_HDR, auth.jwt)
-    utils.createResponse(req, res, 202, true, "registered", {auth: auth?.user})
+        const transaction = await TransactionDb.signedUp(user)
+        if(!transaction)
+            return next(utils.createError("some error occured while signing up"));
+
+        const [saveErr, userDoc] = await carefully(user.save())
+        if(!userDoc || saveErr) 
+            return next(utils.createError("some error occured while signing up"));
 
 
-    TransactionDb.signedUp(userDoc)
-    .catch((err) => next(utils.createError(err, true)));
-    
+        const [authErr, auth] = await carefully(utils.createAuthData(userDoc))
+        if(auth) 
+            res.setHeader(config.ACC_TKN_HDR, auth.jwt)
+        utils.createResponse(req, res, 202, true, "registered", {auth: auth?.user})
 
-    userDoc.ip = utils.remoteIp(req);
-    TokenDB.newEmailVerification(userDoc, null)
-    .then((token) => {
-        if(token)
+
+        userDoc.ip = utils.remoteIp(req);
+        const [tokenErr, token] = await carefully(TokenDB.newEmailVerification(userDoc, null));
+        if(token) 
             mailer.emailVerification(body.email, body.fn, token)
-    })
-    .catch((error) => next(utils.createError(error, true)))
+    } catch (error) {
+        next(error);   
+    }
 }
 
 
@@ -96,33 +89,26 @@ exports.verifyEmail = async function(req, res, next) {
         const tokenData = await TokenDB.findByToken(token, null);
         if(!tokenData) 
             return utils.createResponse(req, res, 422, false, constants.ERR.tokenExpired, null, constants.ERR_C.tokenExpired)
-    
+        
+
         const user = await UserDB.verifyEmail(tokenData)
         if(!user)
             return utils.createResponse(req, res, 409, false, constants.ERR.emAlVerified, null, constants.ERR_C.emAlVerified);
-    
+        
+            
+        const transEmVerified = await TransactionDb.emailVerified(user);
+        if(!transEmVerified) 
+            return next(utils.createError("There was a problem in verifying email"))
 
-        const auth = await utils.createAuthData(user).catch((err) => null)
+        const [authErr, auth] = await carefully(utils.createAuthData(user))
         if(auth)
             res.setHeader(config.ACC_TKN_HDR, auth.jwt)
         utils.createResponse(req, res, 200, true, "Email is verified", {auth : auth?.user})
         
         
-        TokenDB.expireEMVToken(token)
-        .then((doc) => {
-            if(!doc) 
-                return next(utils.createError('Couldn\'t expire token', true))
-        })
-        .catch((error) => next(utils.createError(error, true)))
-
-        TransactionDb.emailVerified(user)
-        .then((doc) => {
-            if(!doc) 
-                return next(utils.createError("Couldn't add verify email transaction", true))
-        })
-        .catch((error) => {
-            return next(utils.createError(error, true));
-        })
+        const [tknDelErr, tknDel] = await carefully(TokenDB.expireEMVToken(token));
+        if(!tknDel) 
+            return next(utils.createError('Couldn\'t expire token', true))
     } catch(error) {
         return next(error);
     }

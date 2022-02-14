@@ -123,13 +123,11 @@ Token.statics.newPasswordReset = async (details, token=null, cb=null) => {
  * @param {Function} cb (err, result)
  * @returns 
  */
-Token.statics.deleteExistingToken = (email, role, type, cb=null) => {
+Token.statics.deleteExistingToken = (email, role, type) => {
     const cond = {email, role, type};
     const collection = mongoose.model(modelName)
 
     const update = {$set: {expired: true}};
-    if(utils.isCb(cb)) 
-        return collection.updateMany(cond, update, cb);
     
     return collection.updateMany(cond, update);
 }

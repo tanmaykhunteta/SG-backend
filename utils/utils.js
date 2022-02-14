@@ -5,10 +5,9 @@ const constants = require('../config/constant')
 
 module.exports = {
 
-    isCb : (cb) => {
-        if(typeof cb == "function")
-            return cb;
-        return null;
+    carefully : function(promise) {
+        console.log(promise)
+        return promise.then((result) => [null, result], (err) => [err, null])
     },
 
 
@@ -34,8 +33,54 @@ module.exports = {
     },
 
 
+    validPageSize : function(pageSize) {
+        pageSize = parseInt(pageSize);
+        if([5, 10, 20, 50].includes(pageSize))
+            return pageSize;
+        
+        return 20;
+    },
 
-    createResponse : function(req, res, status, success, message, data = null, code=null) {
+    validSkip : function(page) {
+        return (page - 1) > -1 ? (page - 1) * 20  : 0
+    },
+
+    
+    createSearchOptions : function(req) {
+        const query = {...req}
+        const options = {
+            filter : {},
+            page_size : module.exports.validPageSize(query.page_size)
+        }
+        delete query.page_size
+    
+        if(query.search_index) {
+            options.search_index = query.search_index
+            delete query.search_index;
+        } else {
+            options.skip = module.exports.getSkip(query.page);
+            delete query.page;
+        }
+
+        if(query.sort) {
+            options.sort = {};
+            query.sort.forEach((sortElem) => {
+                const sortOpt = sortElem.split(':')
+                options.sort[sortOpt[0]] = sortOpt[1]=='asc' ? 1 : -1;
+            })
+            delete query.sort
+        }
+
+        Object.keys(query).forEach( key => {
+            options.filter[key] = query[key];
+        });
+
+        return options;
+    }, 
+
+
+
+    createResponse : function(req, res, status, success, message, data=null, code=null) {
         const response = {
             status : status,
             method : req.method,

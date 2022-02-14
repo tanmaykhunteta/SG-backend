@@ -1,7 +1,12 @@
+const utils = require('../../utils/utils')
 
-
-exports.getUsers = async() => {
-
+exports.getUsers = async(req, res, next) => {
+    const options = utils.createSearchOptions(req);
+    try {
+        
+    } catch (error) {
+        
+    }
 }
 
 

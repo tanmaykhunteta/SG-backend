@@ -58,27 +58,27 @@ User.pre('save', function(next) {
  * @param {Function} cb (optional) (err, result)
  * @returns {Promise<User>}
  */
-User.statics.findUserByEmail = (email, fields=null, cb=null) => {
+User.statics.findUserByEmail = (email, fields=null) => {
     const cond = {email: email};
     fields = fields || {};
     const collection = mongoose.model(modelName)
-    if(utils.isCb(cb))
-        return collection.findOne(cond, fields, {}, cb);
 
     return collection.findOne(cond, fields)
 } 
 
 
-User.statics.verifyEmail = (tokenData, cb=null) => {
+User.statics.getAll = (options) => {
+
+    mongoose.model(modelName).find({}, {}, {})
+}
+
+
+User.statics.verifyEmail = (tokenData) => {
     const cond = {email:tokenData.email, role: tokenData.role, em_verified : false}
     const update = {$set : {em_verified: true, em_verified_on : new Date()}, $inc: {ttl_reward : constants.REWARD_TYPES.email_verified}}
     const options = {new: true}
-    const collection = mongoose.model(modelName);
-    if(utils.isCb(cb)) {
-        return collection.findOneAndUpdate(cond, update, options, cb);
-    }
 
-    return collection.findOneAndUpdate(cond, update, options);
+    return mongoose.model(modelName).findOneAndUpdate(cond, update, options);
 }
 
 
