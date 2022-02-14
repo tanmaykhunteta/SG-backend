@@ -5,23 +5,16 @@ const constants = require('../config/constant')
 
 module.exports = {
 
-    isCb : (cb) => {
-        if(typeof cb == "function")
-            return cb;
-        return null;
+    carefully : function(promise) {
+        return promise.then((result) => [null, result], (err) => [err, null])
     },
 
-    createAuthData : function(details, cb=null) {
-        cb = module.exports.isCb(cb);
+
+    createAuthData : async function(details) {
         const tokenData = { _id: details._id, email : details.email, fn: details.fn, ln: details.ln, em_verified: details.em_verified, ttl_reward : details.ttl_reward, type: constants.ROLES['USER'] }
-        return new Promise((res, rej) => {
-            module.exports.encodeJWT(tokenData, null, (err, token) => {
-                if(err && !cb) return rej(err);
-                const result = {user : tokenData, jwt : token}
-                if(cb) cb(err, result);
-                res(result);
-            })
-        });
+        const token = await module.exports.encodeJWT(tokenData, null)
+        const result = {user : tokenData, jwt : token};
+        return result;
     },
 
     
@@ -31,28 +24,62 @@ module.exports = {
      * 
      * @param {object} payload data to encode
      * @param {string} expiresIn  (optional) expiry time ex: '2m', '1h', etc. 
-     * @param {Function} callback (optional) (err, token : string) => {your implementation}
-     * @returns {Promise} Promise<token> return only when no callback is passed
+     * @returns {string} jwt token
      */
-    encodeJWT : function(payload, expiresIn=null, cb=null) {
+    encodeJWT : async function(payload, expiresIn=null) {
         const extraOptions = {expiresIn : expiresIn || config.JWT_CONFIG.EXPIRES_IN};
-        if(module.exports.isCb(cb)) {
-            jwt.sign(payload, config.JWT_CONFIG.SECRET , extraOptions, cb)
-        } else {
-            return new Promise((res, rej)=> {
-                jwt.sign(payload, config.JWT_CONFIG.SECRET, extraOptions, (err, token)=>{
-                    if(err) 
-                        rej(err);
-                    else 
-                        res(token);
-                })
-            })
-        }
+        return await jwt.sign(payload, config.JWT_CONFIG.SECRET, extraOptions)
     },
 
 
+    validPageSize : function(pageSize) {
+        pageSize = parseInt(pageSize);
+        if([5, 10, 20, 50].includes(pageSize))
+            return pageSize;
+        
+        return 20;
+    },
 
-    createResponse : function(req, res, status, success, message, data = null, code=null) {
+    validSkip : function(page) {
+        return (page - 1) > -1 ? (page - 1) * 20  : 0
+    },
+
+    
+    createSearchOptions : function(req) {
+        const query = {...req}
+        const options = {
+            filter : {},
+            page_size : module.exports.validPageSize(query.page_size)
+        }
+        delete query.page_size
+    
+        if(query.search_index) {
+            options.search_index = query.search_index
+            delete query.search_index;
+        } else {
+            options.skip = module.exports.getSkip(query.page);
+            delete query.page;
+        }
+
+        if(query.sort) {
+            options.sort = {};
+            query.sort.forEach((sortElem) => {
+                const sortOpt = sortElem.split(':')
+                options.sort[sortOpt[0]] = sortOpt[1]=='asc' ? 1 : -1;
+            })
+            delete query.sort
+        }
+
+        Object.keys(query).forEach( key => {
+            options.filter[key] = query[key];
+        });
+
+        return options;
+    }, 
+
+
+
+    createResponse : function(req, res, status, success, message, data=null, code=null) {
         const response = {
             status : status,
             method : req.method,
@@ -68,24 +95,22 @@ module.exports = {
 
     /**
      * return promise if no callback passed.
-     * 
      * @param {number} length length of buffer
      * @param {string} stringType 'hex', 'base64', etc.
-     * @param {Function} cb (optional) (error, string) => void
-     * @returns {Promise<String>} return Promise token/error only if no cb passed
+     * @returns {string} token 
      */
-    generateRandomToken : function(length, stringType, cb=null) { 
+    generateRandomToken : function(length, stringType) { 
         return new Promise((res, rej) => {
             crypto.randomBytes(length, (err, buffer) => {
-                if(err && !cb) return rej(err);
+                if(err) return rej(err);
 
-                if(cb) cb(err, buffer.toString(stringType));
-
-                res(buffer.toString(stringType))
+                const token = buffer.toString(stringType)  
+                res(token)
             })
-        })
+        })  
     },
 
+    
     
     remoteIp : function(req) {
         let IP = null;
@@ -99,7 +124,8 @@ module.exports = {
     },
 
 
-    createError(error=null, handled=false) {
+
+    createError : function(error=null, handled=false) {
         if(error instanceof Object) {
             error.handled = handled;
             return error;
@@ -109,7 +135,6 @@ module.exports = {
             errorObj.handled = handled
             return errorObj;
         }
-
     },
 
 
@@ -121,7 +146,7 @@ module.exports = {
      * @param {object} optionals {only? : string, all? : boolean, except? : string}
      * @returns dataObj with lowerCase values
      */
-    bulkLower(dataObj, { only = "", all=false, except = ""} = {}) {
+    bulkLower : function(dataObj, { only = "", all=false, except = ""} = {}) {
         return module.exports.bulkManipulate(dataObj, {only, all, except}, (value)=>{
             return (typeof value == "string") ? value.toLowerCase() : value;
         })
@@ -136,11 +161,12 @@ module.exports = {
      * @param {object} optionals {only? : string, all? : boolean, except? : string}
      * @returns dataObj with trimmed values
      */
-    bulkTrim(dataObj, { only = "", all=false, except = ""} = {}) {
+    bulkTrim : function(dataObj, { only = "", all=false, except = ""} = {}) {
         return module.exports.bulkManipulate(dataObj, {only, all, except}, (value)=>{
             return typeof value == "string" ? value.trim() : value;
         })
     },
+
 
 
     /** 
@@ -158,7 +184,7 @@ module.exports = {
      * 
      * @return { object } manipulated dataObj
      */
-    bulkManipulate(dataObj, { only = "", all=false, except = ""}, cb) {
+    bulkManipulate : function(dataObj, { only = "", all=false, except = ""}, cb) {
         const obj = {...dataObj}
         if(only && all || only && except) 
             console.log('*all* and *except* are ignored when passed with *only*');

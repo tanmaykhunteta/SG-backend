@@ -1,7 +1,7 @@
 exports.ERR_C = {}
 exports.ERR_C['userAlExists'] = "user-already-exists"
 exports.ERR_C['tokenExpired'] = "token-expired";
-exports.ERR_C['emaAlVerified'] = "email-already-verified";
+exports.ERR_C['emAlVerified'] = "email-already-verified";
 exports.ERR_C['validationErr'] = "validation-errors"
 exports.ERR_C['reCaptchaFailed'] = "recaptcha-failed"
 exports.ERR_C['internalError'] = "internal-error"
@@ -9,6 +9,11 @@ exports.ERR_C['userNoExists'] = "user-does-not-exists";
 
 
 exports.ERR= {}
+exports.ERR['userAlExists'] = 'user already exists'
+exports.ERR['emAlVerified'] = 'email is already verified';
+exports.ERR['tokenExpired'] = 'token might have expired'
+exports.ERR['validationErr'] = 'invalid details sent'
+exports.ERR['reCaptchaFailed'] = 'could not verify recaptcha'
 exports.ERR['internalError'] = 'sorry some error occured'
 
 
@@ -43,6 +48,7 @@ exports.TOKEN_MAX_AGE = 3600 // 1 hour
 exports.TOKEN_TYPES = {}
 exports.TOKEN_TYPES["EMV"] = 'emv'; //email verification
 exports.TOKEN_TYPES["PSR"] = 'pswd_rst'; //password reset
+
 
 
 exports.keyOf = function (value) {
