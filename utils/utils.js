@@ -6,7 +6,6 @@ const constants = require('../config/constant')
 module.exports = {
 
     carefully : function(promise) {
-        console.log(promise)
         return promise.then((result) => [null, result], (err) => [err, null])
     },
 
