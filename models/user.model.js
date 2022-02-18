@@ -87,9 +87,9 @@ User.statics.resetPswd = (tokenData, cb=null) => {
     const update = {'pswd': tokenData.pswd}
     const options = {new: true}
     const collection = mongoose.model(modelName);
-    if(utils.isCb(cb)) {
-        return collection.findOneAndUpdate(cond, update, options, cb);
-    }
+    // if(utils.isCb(cb)) {
+    //     return collection.findOneAndUpdate(cond, update, options, cb);
+    // }
 
     return collection.findOneAndUpdate(cond, update, options);
 }

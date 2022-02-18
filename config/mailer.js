@@ -33,6 +33,7 @@ module.exports.emailVerification = async function(email, name, token) {
 }
 
 module.exports.resetPswd = function(email, name, token) {
+    console.log(name);
     const verifyLink = `${config.FRONTEND}/reset-password?token=${token}`
     console.log(verifyLink)
     const mailData = {

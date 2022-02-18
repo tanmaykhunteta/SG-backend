@@ -14,12 +14,12 @@ const Token = new Schema({
     type : {type: String, enum : constants.TOKEN_TYPES.values},
     rqtIP : String,
     expired : {type: Boolean, default: false},
-    createdAt : {type: Date, index: true}
+    // createdAt : {type: Date,default: Date.now(),index:true,expires: 10}
 }, {
     timestamps : true
 })
 
-Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, partialFilterExpression : {type : {$eq : constants.TOKEN_TYPES.PSR}}})
+// Token.index('createdAt', {expireAfterSeconds : 10});
 
 
 /**
@@ -30,7 +30,7 @@ Token.index('createdAt', {expireAfterSeconds : 10 || config.TOKEN_MAX_AGE, parti
  * @returns {string} returns Promise if no callback passe
  */
 Token.statics.findByToken = async (token, fields=null) => {
-    const cond = {tkn: token}
+    const cond = {tkn: token, createdAt:{$gt:Date.now()-60*1000}, expired:false};
     fields = fields || {}
     const collection = mongoose.model(modelName)
     return await collection.findOne(cond, fields)
@@ -73,7 +73,7 @@ Token.statics.newEmailVerification = async(details, token=null) => {
  * @returns {Promise}
  */
 Token.statics.newPasswordReset = async (details, token=null, cb=null) => {
-    cb = utils.isCb(cb);
+    // cb = utils.isCb(cb);
     return new Promise((res, rej)=>{
         const collection = mongoose.model(modelName);
         Async.waterfall([

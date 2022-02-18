@@ -77,7 +77,7 @@ exports.login = async function(req, res, next) {
 
         return utils.createResponse(req, res, 400, false, "Invalid Credentials")
     } catch (err) {
-        next(err);
+        return next(err);
     }
 }
 
@@ -116,16 +116,23 @@ exports.verifyEmail = async function(req, res, next) {
 
 
 exports.reqResetPswd = function(req, res, next) {
+
+    console.log(req.body);
     
     let body = utils.bulkLower(req.body, {only : "email"})
     body = utils.bulkTrim(body)
 
     Async.waterfall([
         function(cb){
-            UserDB.findUserByEmail(body.email, "_id fn role", (err, existingUser) => {
-                if(err) return cb(err, null);
+            console.log(body);
+            UserDB.findUserByEmail(body.email, "_id fn role").then(( existingUser) => {
+                
                 cb(null, existingUser);
             })
+            .catch(
+                (err) => {
+                    return cb(err, null);
+                })
         },
 
         function(existingUser, cb) {
@@ -137,18 +144,23 @@ exports.reqResetPswd = function(req, res, next) {
             body.role = existingUser.role;
             body.ip = utils.remoteIp(req);
             body.fn = existingUser.fn;
-            TokenDB.newPasswordReset(body,null, (err,token) =>{
-                if(err) return cb(utils.createError(err, true));
+            console.log(body.fn);
+            TokenDB.newPasswordReset(body,null).then((token) =>{
 
                 console.log(body.fn);
                 mailer.resetPswd(body.email, body.fn, token.tkn)
                 cb(null)
 
             })
+            .catch(
+                (err) => {
+                    return cb(utils.createError(err, true))
+                }
+            )
             
             
             
-        },
+            },
     ], 
 
     function(error, result) {
@@ -161,15 +173,17 @@ exports.reqResetPswd = function(req, res, next) {
 
 exports.verifyToken = function(req,res,next){
     const token = req.body.token;
-    TokenDB.findByToken(token, null, (err, tokenData) => {
-        if(err) {
-            return err;
-        }    
+    TokenDB.findByToken(token, null).then((tokenData) => {   
         if(!tokenData || tokenData.expired) {
            return utils.createResponse(req, res, 200, false, "Token might have expired", null, constants.ERR_C.tokenExpired);
         }
         return utils.createResponse(req,res,200,true,"success");
     })
+    .catch(
+         (err) => {
+             next(err);
+         }
+    )
 }
 
 
@@ -177,10 +191,7 @@ exports.resetPassword = function(req, res, next){
     const token = req.body.token;
     Async.waterfall([
         function(cb) {
-            TokenDB.findByToken(token, null, (err, tokenData) => {
-                if(err) {
-                    return cb(err);
-                }    
+            TokenDB.findByToken(token, null).then((tokenData) => {  
                 if(!tokenData || tokenData.expired) {
                     utils.createResponse(req, res, 200, false, "Token might have expired", null, constants.ERR_C.tokenExpired)
                     return cb(utils.createError('token expired', true));
@@ -194,16 +205,23 @@ exports.resetPassword = function(req, res, next){
                 })
                 
             })
+            .catch(
+                (err) => {
+                    next(err);
+                }
+           )
         }, 
 
         function(tokenData, cb) { 
-            UserDB.resetPswd(tokenData, (err, user) => {
-                if(err) {
-                    return cb(err, null);
-                }
+            UserDB.resetPswd(tokenData).then((user) => {
                 utils.createResponse(req, res, 200, true, "Password changed succesfully", null)
-                cb(null, null);
+                // cb(null, null);
             })
+            .catch(
+                (err) => {
+                    next(err);
+                }
+           )
         },
 
     ], function(err, result) {
